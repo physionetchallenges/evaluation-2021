@@ -245,7 +245,7 @@ def load_outputs(output_files, classes, equivalent_classes):
                 if np.any(np.isfinite(tmp)):
                     scalar_outputs[i, j] = np.nanmean(tmp)
                 else:
-                    scalar_otuputs[i, j] = float('nan')
+                    scalar_outputs[i, j] = float('nan')
 
     # If any of the outputs is a NaN, then replace it with a zero.
     binary_outputs[np.isnan(binary_outputs)] = 0

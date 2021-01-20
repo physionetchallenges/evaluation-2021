@@ -8,7 +8,7 @@ You can run the Python evaluation code by installing the NumPy Python package an
 
     python evaluate_model.py labels outputs scores.csv class_scores.csv
 
-where `labels` is a directory containing files with one or more labels for each ECG recording, such as the training database on the PhysioNet webpage; `outputs` is a directory containing files with outputs produced by your algorithm for those recordings; `scores.csv` (optional) is a collection of scores for your algorithm; and `class_scores.csv` (optional) is a collection of per-class scores for your algorithm.
+where `labels` is a directory containing files with one or more labels for each ECG recording, such as the training database on the PhysioNet webpage; `outputs` is a directory containing files with outputs produced by your algorithm for those recordings; `scores.csv` (optional) is a collection of scores for your algorithm; and `class_scores.csv` (optional) is a collection of per-class scores for your algorithm. Please note that `evaluate_model.py` requires two input arguments `(labels, outputs)` or four input arguments including both optional scores files `(labels, outputs, scores.csv, class_scores.csv)`.
 
 ## MATLAB
 
@@ -16,7 +16,8 @@ You can run the MATLAB evaluation code by installing Python and the NumPy Python
 
     evaluate_model(labels, outputs, scores.csv, class_scores.csv)
 
-where `labels` is a directory containing files with one or more labels for each ECG recording, such as the training database on the PhysioNet webpage; `outputs` is a directory containing files with outputs produced by your algorithm for those recordings; `scores.csv` (optional) is a collection of scores for your algorithm; and `class_scores.csv` (optional) is a collection of per-class scores for your algorithm.
+where `labels` is a directory containing files with one or more labels for each ECG recording, such as the training database on the PhysioNet webpage; `outputs` is a directory containing files with outputs produced by your algorithm for those recordings; `scores.csv` (optional) is a collection of scores for your algorithm; and `class_scores.csv` (optional) is a collection of per-class scores for your algorithm. Please note that `evaluate_model` requires two input arguments `(labels, outputs)` or four input arguments including both optional scores files `(labels, outputs, scores.csv, class_scores.csv)`.
+
 
 ## Troubleshooting
 

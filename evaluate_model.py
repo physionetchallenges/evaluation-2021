@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# This file contains functions for evaluating algorithms for the 2021 PhysioNet/
+# This file contains functions for evaluating algorithms for the 2020 PhysioNet/
 # Computing in Cardiology Challenge. You can run it as follows:
 #
 #   python evaluate_model.py labels outputs scores.csv
@@ -46,13 +46,16 @@ def evaluate_model(label_directory, output_directory):
     print('- F-measure...')
     f_measure, f_measure_classes = compute_f_measure(labels, binary_outputs)
 
+    print('- F-beta and G-beta measures...')
+    f_beta_measure, g_beta_measure = compute_beta_measures(labels, binary_outputs, beta=2)
+
     print('- Challenge metric...')
     challenge_metric = compute_challenge_metric(weights, labels, binary_outputs, classes, normal_class)
 
     print('Done.')
 
     # Return the results.
-    return classes, auroc, auprc, auroc_classes, auprc_classes, accuracy, f_measure, f_measure_classes, challenge_metric
+    return classes, auroc, auprc, auroc_classes, auprc_classes, accuracy, f_measure, f_measure_classes, f_beta_measure, g_beta_measure, challenge_metric
 
 # Check if the input is a number.
 def is_number(x):
@@ -241,11 +244,7 @@ def load_outputs(output_files, classes, equivalent_classes):
             indices = [k for k, y in enumerate(dxs) if x==y]
             if indices:
                 binary_outputs[i, j] = np.any([tmp_binary_outputs[i][k] for k in indices])
-                tmp = [tmp_scalar_outputs[i][k] for k in indices]
-                if np.any(np.isfinite(tmp)):
-                    scalar_outputs[i, j] = np.nanmean(tmp)
-                else:
-                    scalar_otuputs[i, j] = float('nan')
+                scalar_outputs[i, j] = np.nanmean([tmp_scalar_outputs[i][k] for k in indices])
 
     # If any of the outputs is a NaN, then replace it with a zero.
     binary_outputs[np.isnan(binary_outputs)] = 0
@@ -321,12 +320,33 @@ def compute_f_measure(labels, outputs):
         else:
             f_measure[k] = float('nan')
 
-    if np.any(np.isfinite(f_measure)):
-        macro_f_measure = np.nanmean(f_measure)
-    else:
-        macro_f_measure = float('nan')
+    macro_f_measure = np.nanmean(f_measure)
 
     return macro_f_measure, f_measure
+
+# Compute F-beta and G-beta measures from the unofficial phase of the Challenge.
+def compute_beta_measures(labels, outputs, beta):
+    num_recordings, num_classes = np.shape(labels)
+
+    A = compute_confusion_matrices(labels, outputs, normalize=True)
+
+    f_beta_measure = np.zeros(num_classes)
+    g_beta_measure = np.zeros(num_classes)
+    for k in range(num_classes):
+        tp, fp, fn, tn = A[k, 1, 1], A[k, 1, 0], A[k, 0, 1], A[k, 0, 0]
+        if (1+beta**2)*tp + fp + beta**2*fn:
+            f_beta_measure[k] = float((1+beta**2)*tp) / float((1+beta**2)*tp + fp + beta**2*fn)
+        else:
+            f_beta_measure[k] = float('nan')
+        if tp + fp + beta*fn:
+            g_beta_measure[k] = float(tp) / float(tp + fp + beta*fn)
+        else:
+            g_beta_measure[k] = float('nan')
+
+    macro_f_beta_measure = np.nanmean(f_beta_measure)
+    macro_g_beta_measure = np.nanmean(g_beta_measure)
+
+    return macro_f_beta_measure, macro_g_beta_measure
 
 # Compute macro AUROC and macro AUPRC.
 def compute_auc(labels, outputs):
@@ -400,14 +420,8 @@ def compute_auc(labels, outputs):
             auprc[k] += (tpr[j+1] - tpr[j]) * ppv[j+1]
 
     # Compute macro AUROC and macro AUPRC across classes.
-    if np.any(np.isfinite(auroc)):
-        macro_auroc = np.nanmean(auroc)
-    else:
-        macro_auroc = float('nan')
-    if np.any(np.isfinite(auprc)):
-        macro_auprc = np.nanmean(auprc)
-    else:
-        macro_auprc = float('nan')
+    macro_auroc = np.nanmean(auroc)
+    macro_auprc = np.nanmean(auprc)
 
     return macro_auroc, macro_auprc, auroc, auprc
 
@@ -460,8 +474,8 @@ def compute_challenge_metric(weights, labels, outputs, classes, normal_class):
     return normalized_score
 
 if __name__ == '__main__':
-    classes, auroc, auprc, auroc_classes, auprc_classes, accuracy, f_measure, f_measure_classes, challenge_metric = evaluate_model(sys.argv[1], sys.argv[2])
-    output_string = 'AUROC,AUPRC,Accuracy,F-measure,Challenge metric\n{:.3f},{:.3f},{:.3f},{:.3f},{:.3f}'.format(auroc, auprc, accuracy, f_measure, challenge_metric)
+    classes, auroc, auprc, auroc_classes, auprc_classes, accuracy, f_measure, f_measure_classes, f_beta_measure, g_beta_measure, challenge_metric = evaluate_model(sys.argv[1], sys.argv[2])
+    output_string = 'AUROC,AUPRC,Accuracy,F-measure,Fbeta-measure,Gbeta-measure,Challenge metric\n{:.3f},{:.3f},{:.3f},{:.3f},{:.3f},{:.3f},{:.3f}'.format(auroc, auprc, accuracy, f_measure, f_beta_measure, g_beta_measure, challenge_metric)
     class_output_string = 'Classes,{}\nAUROC,{}\nAUPRC,{}\nF-measure,{}'.format(
         ','.join(classes),
         ','.join('{:.3f}'.format(x) for x in auroc_classes),

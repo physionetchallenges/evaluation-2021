@@ -4,7 +4,7 @@ This repository contains the Python and MATLAB evaluation code for the PhysioNet
 
 ## Python
 
-You can run the Python evaluation code by installing the NumPy Python package and running
+You can run the Python evaluation code by installing the NumPy Python package and running the following command in your terminal:
 
     python evaluate_model.py labels outputs scores.csv class_scores.csv
 
@@ -12,9 +12,9 @@ where `labels` is a directory containing files with one or more labels for each 
 
 ## MATLAB
 
-You can run the MATLAB evaluation code by installing Python and the NumPy Python package and running
+You can run the MATLAB evaluation code by installing Python and the NumPy Python package and running the following command in MATLAB:
 
-    evaluate_model(labels, outputs, scores.csv, class_scores.csv)
+    evaluate_model('labels', 'outputs', 'scores.csv', 'class_scores.csv')
 
 where `labels` is a directory containing files with one or more labels for each ECG recording, such as the training database on the PhysioNet webpage; `outputs` is a directory containing files with outputs produced by your algorithm for those recordings; `scores.csv` (optional) is a collection of scores for your algorithm; and `class_scores.csv` (optional) is a collection of per-class scores for your algorithm.
 

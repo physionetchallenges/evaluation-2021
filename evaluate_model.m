@@ -1,4 +1,4 @@
-% This file contains functions for evaluating algorithms for the 2020 PhysioNet/
+% This file contains functions for evaluating algorithms for the 2021 PhysioNet/
 % Computing in Cardiology Challenge. You can run it as follows:
 %
 %   evaluate_model(labels, outputs, scores.csv)

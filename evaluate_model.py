@@ -16,23 +16,23 @@
 # measure, and the Challenge metric, which assigns different weights to
 # different misclassification errors.
 
-import numpy as np, os, os.path, sys
+import os, os.path, sys, numpy as np
+from helper_code import get_labels, is_finite_number, load_header, load_outputs
 
 def evaluate_model(label_directory, output_directory):
-    # Define the weights, the SNOMED CT code for the normal class, and equivalent SNOMED CT codes.
+    # Identify the weights and the SNOMED CT code for the sinus rhythm class.
     weights_file = 'weights.csv'
-    normal_class = '426783006'
-    equivalent_classes = [['713427006', '59118001'], ['284470004', '63593006'], ['427172004', '17338001']]
+    sinus_rhythm = set(['426783006'])
 
     # Load the scored classes and the weights for the Challenge metric.
     print('Loading weights...')
-    classes, weights = load_weights(weights_file, equivalent_classes)
+    classes, weights = load_weights(weights_file)
 
     # Load the label and output files.
     print('Loading label and output files...')
     label_files, output_files = find_challenge_files(label_directory, output_directory)
-    labels = load_labels(label_files, classes, equivalent_classes)
-    binary_outputs, scalar_outputs = load_outputs(output_files, classes, equivalent_classes)
+    labels = load_labels(label_files, classes)
+    binary_outputs, scalar_outputs = load_classifier_outputs(output_files, classes)
 
     # Evaluate the model by comparing the labels and outputs.
     print('Evaluating model...')
@@ -47,49 +47,33 @@ def evaluate_model(label_directory, output_directory):
     f_measure, f_measure_classes = compute_f_measure(labels, binary_outputs)
 
     print('- Challenge metric...')
-    challenge_metric = compute_challenge_metric(weights, labels, binary_outputs, classes, normal_class)
+    challenge_metric = compute_challenge_metric(weights, labels, binary_outputs, classes, sinus_rhythm)
 
     print('Done.')
 
     # Return the results.
     return classes, auroc, auprc, auroc_classes, auprc_classes, accuracy, f_measure, f_measure_classes, challenge_metric
 
-# Check if the input is a number.
-def is_number(x):
-    try:
-        float(x)
-        return True
-    except ValueError:
-        return False
-
 # Find Challenge files.
 def find_challenge_files(label_directory, output_directory):
     label_files = list()
     output_files = list()
-    for f in sorted(os.listdir(label_directory)):
-        F = os.path.join(label_directory, f) # Full path for label file
-        if os.path.isfile(F) and F.lower().endswith('.hea') and not f.lower().startswith('.'):
-            root, ext = os.path.splitext(f)
-            g = root + '.csv'
-            G = os.path.join(output_directory, g) # Full path for corresponding output file
-            if os.path.isfile(G):
-                label_files.append(F)
-                output_files.append(G)
+    for label_file in sorted(os.listdir(label_directory)):
+        label_file_path = os.path.join(label_directory, label_file) # Full path for label file
+        if os.path.isfile(label_file_path) and label_file.lower().endswith('.hea') and not label_file.lower().startswith('.'):
+            root, ext = os.path.splitext(label_file)
+            output_file = root + '.csv'
+            output_file_path = os.path.join(output_directory, output_file) # Full path for corresponding output file
+            if os.path.isfile(output_file_path):
+                label_files.append(label_file_path)
+                output_files.append(output_file_path)
             else:
-                raise IOError('Output file {} not found for label file {}.'.format(g, f))
+                raise IOError('Output file {} not found for label file {}.'.format(output_file, label_file))
 
     if label_files and output_files:
         return label_files, output_files
     else:
         raise IOError('No label or output files found.')
-
-# For each set of equivalent classes, replace each class with the representative class for the set.
-def replace_equivalent_classes(classes, equivalent_classes):
-    for j, x in enumerate(classes):
-        for multiple_classes in equivalent_classes:
-            if x in multiple_classes:
-                classes[j] = multiple_classes[0] # Use the first class as the representative class.
-    return classes
 
 # Load a table with row and column names.
 def load_table(table_file):
@@ -111,10 +95,10 @@ def load_table(table_file):
     if num_rows<1:
         raise Exception('The table {} is empty.'.format(table_file))
 
-    num_cols = set(len(table[i])-1 for i in range(num_rows))
-    if len(num_cols)!=1:
+    row_lengths = set(len(table[i])-1 for i in range(num_rows))
+    if len(row_lengths)!=1:
         raise Exception('The table {} has rows with different lengths.'.format(table_file))
-    num_cols = min(num_cols)
+    num_cols = min(row_lengths)
     if num_cols<1:
         raise Exception('The table {} is empty.'.format(table_file))
 
@@ -127,7 +111,7 @@ def load_table(table_file):
     for i in range(num_rows):
         for j in range(num_cols):
             value = table[i+1][j+1]
-            if is_number(value):
+            if is_finite_number(value):
                 values[i, j] = float(value)
             else:
                 values[i, j] = float('nan')
@@ -135,30 +119,23 @@ def load_table(table_file):
     return rows, cols, values
 
 # Load weights.
-def load_weights(weight_file, equivalent_classes):
-    # Load the weight matrix.
+def load_weights(weight_file):
+    # Load the table with the weight matrix.
     rows, cols, values = load_table(weight_file)
+
+    # Split the equivalent classes.
+    rows = [set(row.split('|')) for row in rows]
+    cols = [set(col.split('|')) for col in cols]
     assert(rows == cols)
 
-    # For each collection of equivalent classes, replace each class with the representative class for the set.
-    rows = replace_equivalent_classes(rows, equivalent_classes)
+    # Identify the classes and the weight matrix.
+    classes = rows
+    table = values
 
-    # Check that equivalent classes have identical weights.
-    for j, x in enumerate(rows):
-        for k, y in enumerate(rows[j+1:]):
-            if x==y:
-                assert(np.all(values[j, :]==values[j+1+k, :]))
-                assert(np.all(values[:, j]==values[:, j+1+k]))
-
-    # Use representative classes.
-    classes = [x for j, x in enumerate(rows) if x not in rows[:j]]
-    indices = [rows.index(x) for x in classes]
-    weights = values[np.ix_(indices, indices)]
-
-    return classes, weights
+    return classes, table
 
 # Load labels from header/label files.
-def load_labels(label_files, classes, equivalent_classes):
+def load_labels(label_files, classes):
     # The labels should have the following form:
     #
     # Dx: label_1, label_2, label_3
@@ -166,30 +143,24 @@ def load_labels(label_files, classes, equivalent_classes):
     num_recordings = len(label_files)
     num_classes = len(classes)
 
-    # Load diagnoses.
-    tmp_labels = list()
-    for i in range(num_recordings):
-        with open(label_files[i], 'r') as f:
-            for l in f:
-                if l.startswith('#Dx'):
-                    dxs = [arr.strip() for arr in l.split(': ')[1].split(',')]
-                    dxs = replace_equivalent_classes(dxs, equivalent_classes)
-                    tmp_labels.append(dxs)
-
-    # Use one-hot encoding for labels.
+    # Use one-hot encoding for the labels.
     labels = np.zeros((num_recordings, num_classes), dtype=np.bool)
+
+    # Iterate over the recordings.
     for i in range(num_recordings):
-        dxs = tmp_labels[i]
+        header = load_header(label_files[i])
+        dxs = set(get_labels(header))
         for j, x in enumerate(classes):
-            if x in dxs:
+            if x & dxs:
                 labels[i, j] = 1
 
     return labels
 
 # Load outputs from output files.
-def load_outputs(output_files, classes, equivalent_classes):
+def load_classifier_outputs(output_files, classes):
     # The outputs should have the following form:
     #
+    # #Record ID
     # diagnosis_1, diagnosis_2, diagnosis_3
     #           0,           1,           1
     #        0.12,        0.34,        0.56
@@ -197,59 +168,31 @@ def load_outputs(output_files, classes, equivalent_classes):
     num_recordings = len(output_files)
     num_classes = len(classes)
 
-    # Load the outputs. Perform basic error checking for the output format.
-    tmp_labels = list()
-    tmp_binary_outputs = list()
-    tmp_scalar_outputs = list()
-    for i in range(num_recordings):
-        with open(output_files[i], 'r') as f:
-            lines = [l for l in f if l.strip() and not l.strip().startswith('#')]
-            lengths = [len(l.split(',')) for l in lines]
-            if len(lines)>=3 and len(set(lengths))==1:
-                for j, l in enumerate(lines):
-                    arrs = [arr.strip() for arr in l.split(',')]
-                    if j==0:
-                        row = arrs
-                        row = replace_equivalent_classes(row, equivalent_classes)
-                        tmp_labels.append(row)
-                    elif j==1:
-                        row = list()
-                        for arr in arrs:
-                            number = 1 if arr in ('1', 'True', 'true', 'T', 't') else 0
-                            row.append(number)
-                        tmp_binary_outputs.append(row)
-                    elif j==2:
-                        row = list()
-                        for arr in arrs:
-                            number = float(arr) if is_number(arr) else 0
-                            row.append(number)
-                        tmp_scalar_outputs.append(row)
-            else:
-                print('- The output file {} has formatting errors, so all outputs are assumed to be negative for this recording.'.format(output_files[i]))
-                tmp_labels.append(list())
-                tmp_binary_outputs.append(list())
-                tmp_scalar_outputs.append(list())
-
-    # Use one-hot encoding for binary outputs and the same order for scalar outputs.
-    # If equivalent classes have different binary outputs, then the representative class is positive if any equivalent class is positive.
-    # If equivalent classes have different scalar outputs, then the representative class is the mean of the equivalent classes.
+    # Use one-hot encoding for the outputs.
     binary_outputs = np.zeros((num_recordings, num_classes), dtype=np.bool)
     scalar_outputs = np.zeros((num_recordings, num_classes), dtype=np.float64)
-    for i in range(num_recordings):
-        dxs = tmp_labels[i]
-        for j, x in enumerate(classes):
-            indices = [k for k, y in enumerate(dxs) if x==y]
-            if indices:
-                binary_outputs[i, j] = np.any([tmp_binary_outputs[i][k] for k in indices])
-                tmp = [tmp_scalar_outputs[i][k] for k in indices]
-                if np.any(np.isfinite(tmp)):
-                    scalar_outputs[i, j] = np.nanmean(tmp)
-                else:
-                    scalar_outputs[i, j] = float('nan')
 
-    # If any of the outputs is a NaN, then replace it with a zero.
-    binary_outputs[np.isnan(binary_outputs)] = 0
-    scalar_outputs[np.isnan(scalar_outputs)] = 0
+    # Iterate over the recordings.
+    for i in range(num_recordings):
+        recording_id, recording_classes, recording_binary_outputs, recording_scalar_outputs = load_outputs(output_files[i])
+
+        # Allow for equivalent classes and sanitize classifier outputs.
+        recording_classes = [set(entry.split('|')) for entry in recording_classes]
+        recording_binary_outputs = [1 if entry in ('1', 'True', 'true', 'T', 't') else 0 for entry in recording_binary_outputs]
+        recording_scalar_outputs = [float(entry) if is_finite_number(entry) else 0 for entry in recording_scalar_outputs]
+
+        # Allow for unordered/reordered and equivalent classes.
+        for j, x in enumerate(classes):
+            binary_values = list()
+            scalar_values = list()
+            for k, y in enumerate(recording_classes):
+                if x & y:
+                    binary_values.append(recording_binary_outputs[k])
+                    scalar_values.append(recording_scalar_outputs[k])
+            if binary_values:
+                binary_outputs[i, j] = any(binary_values) # Define a class as positive if any of the equivalent classes are positive.
+            if scalar_values:
+                scalar_outputs[i, j] = np.mean(scalar_values) # Use the mean value of the scalar outputs for equivalent classes.
 
     return binary_outputs, scalar_outputs
 
@@ -433,9 +376,12 @@ def compute_modified_confusion_matrix(labels, outputs):
     return A
 
 # Compute the evaluation metric for the Challenge.
-def compute_challenge_metric(weights, labels, outputs, classes, normal_class):
+def compute_challenge_metric(weights, labels, outputs, classes, sinus_rhythm):
     num_recordings, num_classes = np.shape(labels)
-    normal_index = classes.index(normal_class)
+    if sinus_rhythm in classes:
+        sinus_rhythm_index = classes.index(sinus_rhythm)
+    else:
+        raise ValueError('The sinus rhythm class is not available.')
 
     # Compute the observed score.
     A = compute_modified_confusion_matrix(labels, outputs)
@@ -446,9 +392,9 @@ def compute_challenge_metric(weights, labels, outputs, classes, normal_class):
     A = compute_modified_confusion_matrix(labels, correct_outputs)
     correct_score = np.nansum(weights * A)
 
-    # Compute the score for the model that always chooses the normal class.
+    # Compute the score for the model that always chooses the sinus rhythm class.
     inactive_outputs = np.zeros((num_recordings, num_classes), dtype=np.bool)
-    inactive_outputs[:, normal_index] = 1
+    inactive_outputs[:, sinus_rhythm_index] = 1
     A = compute_modified_confusion_matrix(labels, inactive_outputs)
     inactive_score = np.nansum(weights * A)
 
@@ -463,7 +409,7 @@ if __name__ == '__main__':
     classes, auroc, auprc, auroc_classes, auprc_classes, accuracy, f_measure, f_measure_classes, challenge_metric = evaluate_model(sys.argv[1], sys.argv[2])
     output_string = 'AUROC,AUPRC,Accuracy,F-measure,Challenge metric\n{:.3f},{:.3f},{:.3f},{:.3f},{:.3f}'.format(auroc, auprc, accuracy, f_measure, challenge_metric)
     class_output_string = 'Classes,{}\nAUROC,{}\nAUPRC,{}\nF-measure,{}'.format(
-        ','.join(classes),
+        ','.join('|'.join(sorted(x)) for x in classes),
         ','.join('{:.3f}'.format(x) for x in auroc_classes),
         ','.join('{:.3f}'.format(x) for x in auprc_classes),
         ','.join('{:.3f}'.format(x) for x in f_measure_classes))

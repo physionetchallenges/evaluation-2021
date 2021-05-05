@@ -94,7 +94,6 @@ def load_table(table_file):
     num_rows = len(table)-1
     if num_rows<1:
         raise Exception('The table {} is empty.'.format(table_file))
-
     row_lengths = set(len(table[i])-1 for i in range(num_rows))
     if len(row_lengths)!=1:
         raise Exception('The table {} has rows with different lengths.'.format(table_file))
@@ -130,9 +129,9 @@ def load_weights(weight_file):
 
     # Identify the classes and the weight matrix.
     classes = rows
-    table = values
+    weights = values
 
-    return classes, table
+    return classes, weights
 
 # Load labels from header/label files.
 def load_labels(label_files, classes):
@@ -149,9 +148,9 @@ def load_labels(label_files, classes):
     # Iterate over the recordings.
     for i in range(num_recordings):
         header = load_header(label_files[i])
-        dxs = set(get_labels(header))
+        y = set(get_labels(header))
         for j, x in enumerate(classes):
-            if x & dxs:
+            if x & y:
                 labels[i, j] = 1
 
     return labels
@@ -190,9 +189,9 @@ def load_classifier_outputs(output_files, classes):
                     binary_values.append(recording_binary_outputs[k])
                     scalar_values.append(recording_scalar_outputs[k])
             if binary_values:
-                binary_outputs[i, j] = any(binary_values) # Define a class as positive if any of the equivalent classes are positive.
+                binary_outputs[i, j] = any(binary_values) # Define a class as positive if any of the equivalent classes is positive.
             if scalar_values:
-                scalar_outputs[i, j] = np.mean(scalar_values) # Use the mean value of the scalar outputs for equivalent classes.
+                scalar_outputs[i, j] = np.mean(scalar_values) # Define the scalar value of a class as the mean value of the scalar values across equivalent classes.
 
     return binary_outputs, scalar_outputs
 
@@ -354,7 +353,7 @@ def compute_auc(labels, outputs):
 
     return macro_auroc, macro_auprc, auroc, auprc
 
-# Compute modified confusion matrix for multi-class, multi-label tasks.
+# Compute a modified confusion matrix for multi-class, multi-label tasks.
 def compute_modified_confusion_matrix(labels, outputs):
     # Compute a binary multi-class, multi-label confusion matrix, where the rows
     # are the labels and the columns are the outputs.

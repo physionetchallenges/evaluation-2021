@@ -1,0 +1,31 @@
+Dx,SNOMEDCTCode,Abbreviation,CPSC,CPSC_Extra,StPetersburg,PTB,PTB_XL,Georgia,Chapman_Shaoxing,Ningbo,Total,Notes
+atrial fibrillation,164889003,AF,1221,153,2,15,1514,570,1780,0,5255,
+atrial flutter,164890007,AFL,0,54,0,1,73,186,445,7615,8374,
+bundle branch block,6374002,BBB,0,0,1,20,0,116,0,385,522,
+bradycardia,426627000,Brady,0,271,11,0,0,6,0,7,295,
+complete left bundle branch block,733534002,CLBBB,0,0,0,0,0,0,0,213,213,We score 733534002 and 164909002 as the same diagnosis
+complete right bundle branch block,713427006,CRBBB,0,113,0,0,542,28,0,1096,1779,We score 713427006 and 59118001 as the same diagnosis.
+1st degree av block,270492004,IAVB,722,106,0,0,797,769,247,893,3534,
+incomplete right bundle branch block,713426002,IRBBB,0,86,0,0,1118,407,0,246,1857,
+left axis deviation,39732003,LAD,0,0,0,0,5146,940,382,1163,7631,
+left anterior fascicular block,445118002,LAnFB,0,0,0,0,1626,180,0,380,2186,
+left bundle branch block,164909002,LBBB,236,38,0,0,536,231,205,248,1494,We score 733534002 and 164909002 as the same diagnosis
+low qrs voltages,251146004,LQRSV,0,0,0,0,182,374,249,1364,2169,
+nonspecific intraventricular conduction disorder,698252002,NSIVCB,0,4,1,0,789,203,235,536,1768,
+sinus rhythm,426783006,NSR,918,4,0,80,18092,1752,1826,6299,28971,
+premature atrial contraction,284470004,PAC,616,73,3,0,398,639,258,1054,3041,We score 284470004 and 63593006 as the same diagnosis.
+pacing rhythm,10370003,PR,0,3,0,0,296,0,0,1182,1481,
+poor R wave Progression,365413008,PRWP,0,0,0,0,0,0,0,638,638,
+premature ventricular contractions,427172004,PVC,0,188,0,0,0,0,0,1091,1279,We score 427172004 and 17338001 as the same diagnosis.
+prolonged pr interval,164947007,LPR,0,0,0,0,340,0,12,40,392,
+prolonged qt interval,111975006,LQT,0,4,0,0,118,1391,57,334,1904,
+qwave abnormal,164917005,QAb,0,1,0,0,548,464,235,828,2076,
+right axis deviation,47665007,RAD,0,1,0,0,343,83,215,638,1280,
+right bundle branch block,59118001,RBBB,1857,1,2,0,0,542,454,195,3051,We score 713427006 and 59118001 as the same diagnosis.
+sinus arrhythmia,427393009,SA,0,11,2,0,772,455,0,2550,3790,
+sinus bradycardia,426177001,SB,0,45,0,0,637,1677,3889,12670,18918,
+sinus tachycardia,427084000,STach,0,303,11,1,826,1261,12,40,2454,
+supraventricular premature beats,63593006,SVPB,0,53,4,0,157,1,0,9,224,We score 284470004 and 63593006 as the same diagnosis.
+t wave abnormal,164934002,TAb,0,22,0,0,2345,2306,1876,5167,11716,
+t wave inversion,59931005,TInv,0,5,1,0,294,812,157,2720,3989,
+ventricular premature beats,17338001,VPB,0,8,0,0,0,357,294,0,659,We score 427172004 and 17338001 as the same diagnosis.

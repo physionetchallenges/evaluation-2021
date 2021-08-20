@@ -177,7 +177,7 @@ def load_classifier_outputs(output_files, classes):
 
         # Allow for equivalent classes and sanitize classifier outputs.
         recording_classes = [set(entry.split('|')) for entry in recording_classes]
-        recording_binary_outputs = [1 if entry in ('1', 'True', 'true', 'T', 't') else 0 for entry in recording_binary_outputs]
+        recording_binary_outputs = [1 if ((is_finite_number(entry) and float(entry)==1) or (entry in ('True', 'true', 'T', 't'))) else 0 for entry in recording_binary_outputs]
         recording_scalar_outputs = [float(entry) if is_finite_number(entry) else 0 for entry in recording_scalar_outputs]
 
         # Allow for unordered/reordered and equivalent classes.
